@@ -2,6 +2,7 @@ package com.turkcell.spring_cqrs.core.security.jwt;
 
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 import javax.crypto.SecretKey;
@@ -9,6 +10,7 @@ import javax.crypto.SecretKey;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -26,17 +28,24 @@ public class JwtService {
         this.signingKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generate(UUID userId, String email)
-    {
+    public String generate(UUID userId, String email, List<String> roles) {
         Instant now = Instant.now();
         return Jwts.builder()
                    .issuer(this.jwtProperties.getIssuer())
                    .subject(userId.toString())
                    .claim("email", email)
-                   .claim("deneme", "deneme")
+                   .claim("roles", roles)
                    .issuedAt(Date.from(now))
                    .expiration(Date.from(now.plusSeconds(this.jwtProperties.getExpirationInSeconds())))
                    .signWith(this.signingKey)
                    .compact();
-    } 
+    }
+
+    public Claims parse(String token) {
+        return Jwts.parser()
+                   .verifyWith(signingKey)
+                   .build()
+                   .parseSignedClaims(token)
+                   .getPayload();
+    }
 }
